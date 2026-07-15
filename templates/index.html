@@ -186,10 +186,25 @@
   .explanation-text { font-size: 13.5px; color: var(--text-primary); line-height: 1.5; margin: 0; }
 
   .next-step {
-    background: #F1F5F9;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+    border-left: 5px solid #083344;
     flex: 1;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.15);
   }
-  .next-step p { font-size: 13.5px; line-height: 1.5; margin: 0; }
+  .next-step h3 {
+    color: white;
+    font-size: 13px;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    font-weight: 700;
+  }
+  .next-step p {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.5;
+    margin: 0;
+    color: white;
+  }
 
   .placeholder-state { color: var(--text-secondary); font-size: 14px; text-align: center; padding: 40px 20px; }
 
