@@ -11,6 +11,7 @@ from detect import analyze, build_explanation
 load_dotenv()
 
 app = Flask(__name__)
+app.config["TEMPLATES_AUTO_RELOAD"] = True
 
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
