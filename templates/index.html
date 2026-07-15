@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AI Email Phishing Detector</title>
+<style>
+  :root {
+    --bg: #F4F7FA;
+    --card-bg: #FFFFFF;
+    --border: #E2E8F0;
+    --text-primary: #0F172A;
+    --text-secondary: #64748B;
+    --accent: #0891B2;
+    --accent-dark: #0E7490;
+    --safe: #16A34A;
+    --safe-bg: #DCFCE7;
+    --suspicious: #D97706;
+    --suspicious-bg: #FEF3C7;
+    --high-risk: #DC2626;
+    --high-risk-bg: #FEE2E2;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text-primary);
+    margin: 0;
+    padding: 0 24px 48px;
+  }
+
+  .container { max-width: 1180px; margin: 0 auto; }
+
+  header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 28px 0 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 28px;
+  }
+
+  .logo {
+    width: 44px;
+    height: 44px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+  }
+
+  .logo svg { width: 24px; height: 24px; }
+
+  header h1 { font-size: 20px; margin: 0; }
+  header p { font-size: 13px; color: var(--text-secondary); margin: 2px 0 0; }
+
+  .grid {
+    display: grid;
+    grid-template-columns: 1.15fr 1fr;
+    gap: 22px;
+    align-items: start;
+  }
+
+  @media (max-width: 860px) {
+    .grid { grid-template-columns: 1fr; }
+  }
+
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 18px 20px;
+  }
+
+  .top-row { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; margin-bottom: 22px; }
+
+  .stat-label {
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    color: var(--text-secondary);
+    text-transform: uppercase;
+    font-weight: 600;
+  }
+
+  .stat-value { font-size: 30px; font-weight: 700; margin-top: 8px; }
+  .stat-value .unit { font-size: 15px; font-weight: 400; color: var(--text-secondary); margin-left: 4px; }
+
+  .stat-value.Safe { color: var(--safe); }
+  .stat-value.Suspicious { color: var(--suspicious); }
+  .stat-value.High-Risk { color: var(--high-risk); }
+
+  .msg-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
+  .msg-card-header h2 { font-size: 15px; margin: 0; }
+
+  .load-sample {
+    font-size: 13px;
+    color: var(--accent);
+    cursor: pointer;
+    background: none;
+    border: none;
+    font-family: inherit;
+    padding: 0;
+  }
+  .load-sample:hover { text-decoration: underline; }
+
+  textarea {
+    width: 100%;
+    height: 260px;
+    font-size: 14px;
+    font-family: inherit;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    resize: vertical;
+    color: var(--text-primary);
+  }
+  textarea:focus { outline: none; border-color: var(--accent); }
+
+  .msg-card-footer { display: flex; justify-content: flex-end; margin-top: 14px; }
+
+  button#analyzeBtn {
+    background: var(--accent);
+    color: white;
+    border: none;
+    padding: 10px 22px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 600;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  button#analyzeBtn:hover:not(:disabled) { background: var(--accent-dark); }
+  button#analyzeBtn:disabled { background: #CBD5E1; cursor: not-allowed; }
+
+  .panel {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  .panel-section { padding: 18px 20px; border-bottom: 1px solid var(--border); }
+  .panel-section:last-child { border-bottom: none; }
+
+  .panel-section h3 {
+    font-size: 14px;
+    margin: 0 0 10px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .flags-empty { display: flex; align-items: center; gap: 6px; color: var(--safe); font-size: 14px; }
+
+  ul#flagsList { list-style: none; padding: 0; margin: 0; }
+  ul#flagsList li {
+    display: flex;
+    gap: 8px;
+    font-size: 13.5px;
+    margin-bottom: 10px;
+    line-height: 1.4;
+  }
+  ul#flagsList li:last-child { margin-bottom: 0; }
+  ul#flagsList .flag-icon {
+    flex-shrink: 0;
+    margin-top: 5px;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--high-risk);
+  }
+  ul#flagsList .flag-icon.Suspicious { background: var(--suspicious); }
+  ul#flagsList .flag-icon.Safe { background: var(--safe); }
+  ul#flagsList .flag-cat { font-weight: 700; }
+
+  .explanation-text { font-size: 13.5px; color: var(--text-primary); line-height: 1.5; margin: 0; }
+
+  .next-step {
+    background: #F1F5F9;
+    flex: 1;
+  }
+  .next-step p { font-size: 13.5px; line-height: 1.5; margin: 0; }
+
+  .placeholder-state { color: var(--text-secondary); font-size: 14px; text-align: center; padding: 40px 20px; }
+
+  .error-banner {
+    background: var(--high-risk-bg);
+    color: var(--high-risk);
+    padding: 10px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    margin-bottom: 16px;
+  }
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <div class="logo">
+      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M12 2L4 5v6c0 5 3.4 9 8 11 4.6-2 8-6 8-11V5l-8-3z" fill="white"/>
+        <path d="M9.5 12.5l1.8 1.8 3.5-3.8" stroke="#0891B2" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+      </svg>
+    </div>
+    <div>
+      <h1>AI Email Phishing Detector</h1>
+      <p>Paste a message to scan it for phishing red flags</p>
+    </div>
+  </header>
+
+  <div class="grid">
+    <div>
+      <div class="top-row">
+        <div class="card">
+          <div class="stat-label">Label</div>
+          <div class="stat-value" id="labelValue">—</div>
+        </div>
+        <div class="card">
+          <div class="stat-label">Score</div>
+          <div class="stat-value" id="scoreValue">— <span class="unit">/100</span></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="msg-card-header">
+          <h2>Message</h2>
+          <button class="load-sample" id="loadSampleBtn" type="button">Load sample</button>
+        </div>
+        <textarea id="message" placeholder="Paste the message here..."></textarea>
+        <div class="msg-card-footer">
+          <button id="analyzeBtn" disabled>Analyze message</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card panel" id="resultPanel">
+      <div class="placeholder-state" id="placeholderState">Analysis results will appear here.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+const SAMPLE_MESSAGE = "Pay ₹500 today to confirm your scholarship eligibility. Click this link immediately.";
+
+const messageEl = document.getElementById('message');
+const analyzeBtn = document.getElementById('analyzeBtn');
+const loadSampleBtn = document.getElementById('loadSampleBtn');
+const labelValue = document.getElementById('labelValue');
+const scoreValue = document.getElementById('scoreValue');
+const resultPanel = document.getElementById('resultPanel');
+
+function updateButtonState() {
+  analyzeBtn.disabled = messageEl.value.trim().length === 0;
+}
+messageEl.addEventListener('input', updateButtonState);
+
+loadSampleBtn.addEventListener('click', () => {
+  messageEl.value = SAMPLE_MESSAGE;
+  updateButtonState();
+});
+
+function labelClass(label) {
+  return label.replace(/\s+/g, '-');
+}
+
+function renderPanel(data) {
+  const cls = labelClass(data.label);
+  let flagsHtml;
+  if (data.red_flags && data.red_flags.length) {
+    flagsHtml = '<ul id="flagsList">' + data.red_flags.map(f =>
+      `<li><span class="flag-icon ${cls}"></span><span><span class="flag-cat">${f.category}</span> — matched "${f.matched}": ${f.reason}</span></li>`
+    ).join('') + '</ul>';
+  } else {
+    flagsHtml = '<div class="flags-empty">No red flags detected.</div>';
+  }
+
+  resultPanel.innerHTML = `
+    <div class="panel-section">
+      <h3>Red Flags</h3>
+      ${flagsHtml}
+    </div>
+    <div class="panel-section">
+      <h3>Explanation</h3>
+      <p class="explanation-text">${data.explanation || ''}</p>
+    </div>
+    <div class="panel-section next-step">
+      <h3>Next step</h3>
+      <p>${data.next_action}</p>
+    </div>
+  `;
+}
+
+analyzeBtn.addEventListener('click', async () => {
+  const message = messageEl.value.trim();
+  if (!message) return;
+
+  analyzeBtn.disabled = true;
+  analyzeBtn.textContent = 'Analyzing...';
+  labelValue.textContent = '…';
+  labelValue.className = 'stat-value';
+  scoreValue.innerHTML = '… <span class="unit">/100</span>';
+  resultPanel.innerHTML = '<div class="placeholder-state">Analyzing message...</div>';
+
+  try {
+    const res = await fetch('/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message })
+    });
+    const data = await res.json();
+
+    if (!res.ok) {
+      resultPanel.innerHTML = `<div class="placeholder-state error-banner">${data.error || 'Something went wrong.'}</div>`;
+      return;
+    }
+
+    const cls = labelClass(data.label);
+    labelValue.textContent = data.label;
+    labelValue.className = 'stat-value ' + cls;
+    scoreValue.innerHTML = `${data.score} <span class="unit">/100</span>`;
+    renderPanel(data);
+  } catch (err) {
+    resultPanel.innerHTML = `<div class="placeholder-state error-banner">Request failed: ${err}</div>`;
+  } finally {
+    updateButtonState();
+    analyzeBtn.textContent = 'Analyze message';
+  }
+});
+</script>
+</body>
+</html>
